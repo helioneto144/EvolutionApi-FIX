@@ -1,26 +1,173 @@
-<h1 align="center">Evolution Api</h1>
+# Evolution API v2.3.6 - Fix Notificações WhatsApp 🔔
 
 <div align="center">
 
-[![Docker Image](https://img.shields.io/badge/Docker-image-blue)](https://hub.docker.com/r/evoapicloud/evolution-api)
-[![Whatsapp Group](https://img.shields.io/badge/Group-WhatsApp-%2322BC18)](https://evolution-api.com/whatsapp)
-[![Discord Community](https://img.shields.io/badge/Discord-Community-blue)](https://evolution-api.com/discord)
-[![Postman Collection](https://img.shields.io/badge/Postman-Collection-orange)](https://evolution-api.com/postman) 
-[![Documentation](https://img.shields.io/badge/Documentation-Official-green)](https://doc.evolution-api.com)
-[![Feature Requests](https://img.shields.io/badge/Feature-Requests-purple)](https://evolutionapi.canny.io/feature-requests)
-[![Roadmap](https://img.shields.io/badge/Roadmap-Community-blue)](https://evolutionapi.canny.io/feature-requests)
-[![Changelog](https://img.shields.io/badge/Changelog-Updates-green)](https://evolutionapi.canny.io/changelog)
-[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](./LICENSE)
-[![Support](https://img.shields.io/badge/Donation-picpay-green)](https://app.picpay.com/user/davidsongomes1998)
-[![Sponsors](https://img.shields.io/badge/Github-sponsor-orange)](https://github.com/sponsors/EvolutionAPI)
+[![Docker Hub](https://img.shields.io/badge/Docker%20Hub-heliomenezes%2Fevolution--api-blue?logo=docker)](https://hub.docker.com/r/heliomenezes/evolution-api)
+[![Version](https://img.shields.io/badge/version-2.3.6--fix--notifications-green)](https://github.com/helioneto144/EvolutionApi-FIX/releases)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
+[![Evolution API](https://img.shields.io/badge/Evolution%20API-v2.3.6-orange)](https://github.com/EvolutionAPI/evolution-api)
+[![Issue](https://img.shields.io/badge/Fix-Issue%20%23512-success)](https://github.com/EvolutionAPI/evolution-api/issues/512)
 
 </div>
-  
+
 <div align="center"><img src="./public/images/cover.png"></div>
 
-## Evolution API
+## 🎯 Sobre Este Fork
 
-Evolution API began as a WhatsApp controller API based on [CodeChat](https://github.com/code-chat-br/whatsapp-api), which in turn implemented the [Baileys](https://github.com/WhiskeySockets/Baileys) library. While originally focused on WhatsApp, Evolution API has grown into a comprehensive platform supporting multiple messaging services and integrations. We continue to acknowledge CodeChat for laying the groundwork.
+Este é um fork customizado do **Evolution API v2.3.6** com correção aplicada para resolver o problema de **som de notificações do WhatsApp** que param de funcionar após conectar uma sessão via API.
+
+**Issue Original**: [EvolutionAPI/evolution-api#512](https://github.com/EvolutionAPI/evolution-api/issues/512)
+
+## ✨ Problema Resolvido
+
+Quando uma sessão do WhatsApp é conectada via Evolution API, o som das notificações para de funcionar no celular, mesmo com a configuração `alwaysOnline: false`. Esta versão implementa a correção sugerida pela comunidade.
+
+### Correção Aplicada
+
+- ✅ **Atualização automática de presença** para "unavailable" a cada 5 minutos
+- ✅ **Presença após envio** definida como "unavailable" após cada mensagem enviada
+- ✅ **Respeita configuração** `alwaysOnline` da instância
+- ✅ **Limpeza de intervalos** em caso de reconexão (evita memory leaks)
+
+**Baseado em**: [Comentário #3140336013](https://github.com/EvolutionAPI/evolution-api/issues/512#issuecomment-3140336013) por [@jlenon7](https://github.com/jlenon7)
+
+## 🚀 Uso Rápido
+
+### Docker Hub (Recomendado)
+
+```bash
+# Última versão com correção
+docker pull heliomenezes/evolution-api:latest
+
+# Versão específica
+docker pull heliomenezes/evolution-api:2.3.6-fix-notifications
+```
+
+### Docker Run
+
+```bash
+docker run -d \
+  --name evolution-api \
+  -p 8080:8080 \
+  -e DATABASE_PROVIDER=postgresql \
+  -e DATABASE_CONNECTION_URI=postgresql://user:pass@host:5432/db \
+  -e AUTHENTICATION_API_KEY=sua-chave-segura \
+  -e SERVER_URL=https://seu-dominio.com \
+  -v evolution_instances:/evolution/instances \
+  -v evolution_store:/evolution/store \
+  heliomenezes/evolution-api:latest
+```
+
+### Docker Compose
+
+```bash
+# Use o arquivo fornecido
+docker-compose -f docker-compose.easypanel.yml up -d
+```
+
+## 📋 Configuração Importante
+
+Para que a correção funcione, configure a instância com `alwaysOnline: false`:
+
+```bash
+curl -X POST http://localhost:8080/instance/settings/sua-instancia \
+  -H "apikey: SUA_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "alwaysOnline": false
+  }'
+```
+
+## 🔧 Mudanças no Código
+
+### Arquivo Modificado
+
+**`src/api/integrations/channel/whatsapp/whatsapp.baileys.service.ts`**
+
+**1. Nova propriedade** para controle do intervalo:
+```typescript
+private presenceIntervalId: any = null;
+```
+
+**2. Intervalo de atualização** (a cada 5 minutos):
+```typescript
+this.presenceIntervalId = setInterval(() => {
+  if (!this.localSettings.alwaysOnline) {
+    this.setPresence({ presence: 'unavailable' });
+  }
+}, 300000);
+```
+
+**3. Presença após envio de mensagem**:
+```typescript
+if (!this.localSettings.alwaysOnline) {
+  await this.client.sendPresenceUpdate('unavailable');
+}
+```
+
+## 📚 Documentação Completa
+
+- **[PUBLICACAO_CONCLUIDA.md](PUBLICACAO_CONCLUIDA.md)** - Guia completo de uso e deploy
+- **[QUICKSTART.md](QUICKSTART.md)** - Início rápido
+- **[DOCKER_BUILD.md](DOCKER_BUILD.md)** - Build e deploy detalhado
+- **[COMO_PROCEDER.md](COMO_PROCEDER.md)** - Próximos passos
+- **[README_CUSTOM.md](README_CUSTOM.md)** - Visão geral do projeto customizado
+- **[RESUMO_IMPLEMENTACAO.md](RESUMO_IMPLEMENTACAO.md)** - Resumo técnico
+
+## 🐳 Docker Hub
+
+**Repositório**: [heliomenezes/evolution-api](https://hub.docker.com/r/heliomenezes/evolution-api)
+
+**Tags disponíveis**:
+- `latest` - Última versão com correção
+- `2.3.6-fix-notifications` - Versão específica
+
+**Digest**: `sha256:3be59ddd289300594df74d4d2a168f155151f479fd704420453091cdb2850ca5`
+
+## 📦 Versão Base
+
+- **Evolution API**: v2.3.6
+- **Node.js**: 24-alpine
+- **Correção**: Issue #512 aplicada
+
+## 🛠️ Build Local
+
+```bash
+# Clone o repositório
+git clone https://github.com/helioneto144/EvolutionApi-FIX.git
+cd EvolutionApi-FIX
+
+# Build da imagem
+docker build -t evolution-api:local .
+
+# Ou use o script automatizado
+chmod +x build-and-push.sh
+./build-and-push.sh
+```
+
+## 🤝 Créditos
+
+- **Evolution API**: [EvolutionAPI/evolution-api](https://github.com/EvolutionAPI/evolution-api)
+- **Correção original**: [@jlenon7](https://github.com/jlenon7)
+- **Issue**: [#512](https://github.com/EvolutionAPI/evolution-api/issues/512)
+- **Desenvolvido por**: [Helio Neto](https://github.com/helioneto144)
+
+## 🆘 Suporte
+
+- **Issues deste fork**: [GitHub Issues](https://github.com/helioneto144/EvolutionApi-FIX/issues)
+- **Evolution API Docs**: https://doc.evolution-api.com/
+- **Discord**: https://evolution-api.com/discord
+- **WhatsApp Group**: https://evolution-api.com/whatsapp
+
+## 📄 Licença
+
+Este projeto mantém a mesma licença do Evolution API original: **Apache License 2.0**
+
+---
+
+## 📖 Sobre o Evolution API Original
+
+Evolution API began as a WhatsApp controller API based on [CodeChat](https://github.com/code-chat-br/whatsapp-api), which in turn implemented the [Baileys](https://github.com/WhiskeySockets/Baileys) library. While originally focused on WhatsApp, Evolution API has grown into a comprehensive platform supporting multiple messaging services and integrations.
 
 Today, Evolution API is not limited to WhatsApp. It integrates with various platforms such as Typebot, Chatwoot, Dify, and OpenAI, offering a broad array of functionalities beyond messaging. Evolution API supports both the Baileys-based WhatsApp API and the official WhatsApp Business API, with upcoming support for Instagram and Messenger.
 
