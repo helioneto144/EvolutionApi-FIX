@@ -1,0 +1,183 @@
+version: '3.8'
+
+# Docker Compose otimizado para Easypanel
+# Evolution API v2.3.6 com correção do issue #512 (som de notificações)
+
+services:
+  evolution-api:
+    # Substitua 'seu-usuario' pelo seu nome de usuário do Docker Hub
+    image: seu-usuario/evolution-api:2.3.6-fix-notifications
+    container_name: evolution-api
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      # ==========================================
+      # DATABASE CONFIGURATION
+      # ==========================================
+      - DATABASE_PROVIDER=postgresql
+      - DATABASE_CONNECTION_URI=postgresql://evolution:evolution_password@postgres:5432/evolution
+      - DATABASE_SAVE_DATA_INSTANCE=true
+      - DATABASE_SAVE_DATA_NEW_MESSAGE=true
+      - DATABASE_SAVE_MESSAGE_UPDATE=true
+      - DATABASE_SAVE_DATA_CONTACTS=true
+      - DATABASE_SAVE_DATA_CHATS=true
+      - DATABASE_SAVE_DATA_LABELS=true
+      - DATABASE_SAVE_DATA_HISTORIC=true
+      
+      # ==========================================
+      # AUTHENTICATION
+      # ==========================================
+      # IMPORTANTE: Altere esta chave para uma chave segura!
+      - AUTHENTICATION_API_KEY=MUDE_ESTA_CHAVE_PARA_UMA_SEGURA
+      - AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES=true
+      
+      # ==========================================
+      # SERVER CONFIGURATION
+      # ==========================================
+      - SERVER_TYPE=http
+      - SERVER_PORT=8080
+      # Altere para o domínio do seu Easypanel
+      - SERVER_URL=https://seu-dominio.com
+      
+      # ==========================================
+      # CORS
+      # ==========================================
+      - CORS_ORIGIN=*
+      - CORS_METHODS=GET,POST,PUT,DELETE
+      - CORS_CREDENTIALS=true
+      
+      # ==========================================
+      # LOG CONFIGURATION
+      # ==========================================
+      - LOG_LEVEL=ERROR
+      - LOG_COLOR=true
+      - LOG_BAILEYS=false
+      
+      # ==========================================
+      # INSTANCE CONFIGURATION
+      # ==========================================
+      - DEL_INSTANCE=false
+      - DEL_TEMP_INSTANCES=true
+      
+      # ==========================================
+      # QR CODE CONFIGURATION
+      # ==========================================
+      - QRCODE_LIMIT=30
+      - QRCODE_COLOR=#198754
+      
+      # ==========================================
+      # WEBHOOK CONFIGURATION
+      # ==========================================
+      - WEBHOOK_GLOBAL_URL=
+      - WEBHOOK_GLOBAL_ENABLED=false
+      - WEBHOOK_GLOBAL_WEBHOOK_BY_EVENTS=false
+      
+      # ==========================================
+      # REDIS (Opcional - Recomendado para produção)
+      # ==========================================
+      - REDIS_ENABLED=false
+      # Descomente as linhas abaixo se usar Redis
+      # - REDIS_URI=redis://redis:6379
+      # - REDIS_PREFIX_KEY=evolution
+      
+      # ==========================================
+      # RABBITMQ (Opcional)
+      # ==========================================
+      - RABBITMQ_ENABLED=false
+      
+      # ==========================================
+      # S3 STORAGE (Opcional - Para armazenar mídias)
+      # ==========================================
+      - S3_ENABLE=false
+      # Descomente e configure se usar S3/MinIO
+      # - S3_ACCESS_KEY=
+      # - S3_SECRET_KEY=
+      # - S3_BUCKET=evolution
+      # - S3_PORT=443
+      # - S3_ENDPOINT=s3.amazonaws.com
+      # - S3_USE_SSL=true
+      
+      # ==========================================
+      # CHATWOOT (Opcional)
+      # ==========================================
+      - CHATWOOT_ENABLED=false
+      
+      # ==========================================
+      # OPENAI (Opcional)
+      # ==========================================
+      - OPENAI_ENABLED=false
+      
+      # ==========================================
+      # TYPEBOT (Opcional)
+      # ==========================================
+      - TYPEBOT_ENABLED=false
+      
+    volumes:
+      - evolution_instances:/evolution/instances
+      - evolution_store:/evolution/store
+    networks:
+      - evolution-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres
+    restart: always
+    environment:
+      - POSTGRES_USER=evolution
+      - POSTGRES_PASSWORD=evolution_password
+      - POSTGRES_DB=evolution
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - evolution-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evolution"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5432:5432"
+
+  # ==========================================
+  # REDIS (Opcional - Descomente para usar)
+  # ==========================================
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: redis
+  #   restart: always
+  #   command: redis-server --appendonly yes
+  #   volumes:
+  #     - redis_data:/data
+  #   networks:
+  #     - evolution-network
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+
+volumes:
+  evolution_instances:
+    driver: local
+  evolution_store:
+    driver: local
+  postgres_data:
+    driver: local
+  # redis_data:
+  #   driver: local
+
+networks:
+  evolution-network:
+    driver: bridge
+

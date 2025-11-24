@@ -247,6 +247,7 @@ export class BaileysStartupService extends ChannelStartupService {
   private readonly userDevicesCache: CacheStore = new NodeCache({ stdTTL: 300000, useClones: false });
   private endSession = false;
   private logBaileys = this.configService.get<Log>('LOG').BAILEYS;
+  private presenceIntervalId: any = null;
 
   // Cache TTL constants (in seconds)
   private readonly MESSAGE_CACHE_TTL_SECONDS = 5 * 60; // 5 minutes - avoid duplicate message processing
@@ -679,6 +680,27 @@ export class BaileysStartupService extends ChannelStartupService {
     this.endSession = false;
 
     this.client = makeWASocket(socketConfig);
+
+    /**
+     * Limpa o intervalo se já existir. Importante para casos
+     * de reconnect ao WhatsApp.
+     */
+    if (this.presenceIntervalId) {
+      clearInterval(this.presenceIntervalId);
+    }
+
+    /**
+     * Cria um novo intervalo para atualizar a presença
+     * a cada 5 minutos.
+     */
+    this.presenceIntervalId = setInterval(() => {
+      /**
+       * Apenas atualiza a presença se a flag alwaysOnline estiver desabilitada.
+       */
+      if (!this.localSettings.alwaysOnline) {
+        this.setPresence({ presence: 'unavailable' });
+      }
+    }, 300000);
 
     if (this.localSettings.wavoipToken && this.localSettings.wavoipToken.length > 0) {
       useVoiceCallsBaileys(this.localSettings.wavoipToken, this.client, this.connectionStatus.state as any, true);
@@ -2387,6 +2409,15 @@ export class BaileysStartupService extends ChannelStartupService {
           pushName: messageRaw.pushName,
           isIntegration,
         });
+      }
+
+      // Força presença como unavailable após envio de mensagem para evitar mute das notificações
+      if (!this.localSettings.alwaysOnline) {
+        try {
+          await this.client.sendPresenceUpdate('unavailable');
+        } catch (error) {
+          this.logger.warn('Erro ao definir presença como unavailable');
+        }
       }
 
       return messageRaw;

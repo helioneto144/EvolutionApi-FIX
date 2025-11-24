@@ -3,7 +3,7 @@ FROM node:24-alpine AS builder
 RUN apk update && \
     apk add --no-cache git ffmpeg wget curl bash openssl
 
-LABEL version="2.3.1" description="Api to control whatsapp features through http requests." 
+LABEL version="2.3.6-fix-notifications" description="Api to control whatsapp features through http requests. Fixed notification sound issue #512"
 LABEL maintainer="Davidson Gomes" git="https://github.com/DavidsonGomes"
 LABEL contact="contato@evolution-api.com"
 
